@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+
+print "Hello, world"
+mkdir -p ~/work
+vim ~/work/2015_08_06.txt
