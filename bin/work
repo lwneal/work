@@ -1,5 +1,106 @@
 #!/usr/bin/env python
+"""
+Usage:	
+  work -1            # Yesterday's work
+  work 4             # Work from the fourth of this month
+  work 12 4          # Work from December 4th of this year
+  work grep foobar   # Search all work for "foobar"
+"""
+import os
+import sys
+import subprocess
+import datetime
 
-print "Hello, world"
-mkdir -p ~/work
-vim ~/work/2015_08_06.txt
+
+WORK_DIR = os.path.expanduser("~/work")
+
+
+def get_file_name(dir, delta=None, year=None, month=None, day=None, tag=None):
+  now = datetime.datetime.now()
+  if year is not None:
+    now = now.replace(year=year)
+  if month is not None:
+    now = now.replace(month=month)
+  if day is not None:
+    now = now.replace(day=day)
+  if delta is not None:
+    now += datetime.timedelta(days=delta)
+  
+  formatted_day = now.strftime('%Y_%m_%d')
+  return os.path.join(dir, formatted_day + '.txt')
+
+
+def grep_work(args):
+  # Use all words after 'grep' as a search term
+  search_terms = ' '.join(args[1:])
+  grep_args = ['grep', '-ri', '-C', '2', search_terms, WORK_DIR]
+  try:
+    output = subprocess.check_output(grep_args)
+    sys.stdout.write(output)
+  except subprocess.CalledProcessError:
+    sys.stderr.write('No results')
+
+
+def args_delta(args):
+  if len(args) != 1:
+    return None
+  if args[0][0] not in ['+', '-']:
+    return None
+  try:
+    return int(args[0])
+  except ValueError:
+    return None
+
+
+def args_ymd(args):
+  if len(args) != 3:
+    return None
+  try:
+    return int(args[0]), int(args[1]), int(args[2])
+  except ValueError:
+    return None
+
+
+def args_md(args):
+  if len(args) != 2:
+    return None
+  try:
+    return int(args[0]), int(args[1])
+  except ValueError:
+    return None
+
+
+def args_d(args):
+  if len(args) != 1:
+    return None
+  try:
+    return int(args[0])
+  except ValueError:
+    return None
+
+
+def args_grep(args):
+  return args if args else None
+
+
+if __name__ == '__main__':
+  args = sys.argv[1:]
+  if args_delta(args) is not None:
+    delta = args_delta(args)
+    filename = get_file_name(WORK_DIR, delta=delta)
+  elif args_ymd(args) is not None:
+    year, month, day = args_ymd(args)
+    filename = get_file_name(WORK_DIR, year=year, month=month, day=day)
+  elif args_md(args) is not None:
+    month, day = args_md(args)
+    filename = get_file_name(WORK_DIR, month=month, day=day)
+  elif args_d(args) is not None:
+    day = args_d(args)
+    filename = get_file_name(WORK_DIR, day=day)
+  elif args_grep(args) is not None:
+    grep_work(args)
+    exit(0)
+  else:
+    filename = get_file_name(WORK_DIR)
+  cmd = 'vim {0}'.format(filename)
+  os.system(cmd)
